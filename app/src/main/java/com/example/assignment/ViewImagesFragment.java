@@ -1,9 +1,9 @@
 package com.example.assignment;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,12 +12,7 @@ import android.widget.ImageView;
 
 import com.google.common.base.Charsets;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -84,9 +79,10 @@ public class ViewImagesFragment extends Fragment {
         // Inflate the layout for this fragment
         final View view =  inflater.inflate(R.layout.fragment_view_images, container, false);
 
-         class VersionTask extends AsyncTask<String, String, String> {
+         class VersionTask extends AsyncTask<String, List<GetUrl>, List<GetUrl>> {
+             List<GetUrl> urlList;
             @Override
-            protected String doInBackground(String... strings) {
+            protected List<GetUrl> doInBackground(String... strings) {
                 String result = null;
                 URL url;
                 HttpURLConnection connection = null;
@@ -95,20 +91,23 @@ public class ViewImagesFragment extends Fragment {
                     connection = (HttpURLConnection) url.openConnection();
                     connection.connect();
                     InputStreamReader is = new InputStreamReader(connection.getInputStream(), Charsets.UTF_8);
-                    BufferedReader reader = new BufferedReader(is);
-                    StringBuilder sb = new StringBuilder();
-                    String line = null;
-                    while ((line = reader.readLine()) != null) {
-                        sb.append(line + "\n");
+                    JsonReader reader = new JsonReader(is);
+                    int i=0;
+                    urlList = new ArrayList<>();
+                    reader.beginArray();
+                    while(reader.hasNext()) {
+                        reader.beginObject();
+                        while (reader.hasNext()) {
+                            String name = reader.nextName();
+                            if (name.equals("thumbnailUrl"))
+                                urlList.add(new GetUrl(reader.nextString()));
+                            else
+                                reader.skipValue();
+                        }
+                        reader.endObject();
                     }
-                    is.close();
-                    String json = sb.toString();
-
-                    json = json.replace("\\", "");
-                    json = json.substring(1);
-                    json = json.substring(0, json.length() - 2);
-                    result = json;
-
+                    reader.endArray();
+                    System.out.println("\n size of urllist = " + urlList.size());
                 } catch (IOException e) {
                     Log.d("VersionTask", Log.getStackTraceString(e));
                 } finally {
@@ -116,37 +115,18 @@ public class ViewImagesFragment extends Fragment {
                         connection.disconnect();
                     }
                 }
-                return result;
+                return urlList;
             }
 
             @Override
-            protected void onPostExecute(String result) {
-                super.onPostExecute(result);
-                UrlList = new ArrayList<>();
-                if (result != null) {
-                    try {
-                        result.replace("[" , "");
-                        result.replace("]" , "");
+            protected void onPostExecute(List<GetUrl> urls) {
+                super.onPostExecute(urls);
 
-                        result.replace("},{" , "}@{" );
-                        String objs[] = result.split("@");
-                        System.out.println("\n size = \n"+ objs.length);
-                        for(String obj : objs){
-                            JSONObject object = new JSONObject(obj);
-                            GetUrl url = new GetUrl(object.getString("thumbnailUrl"));
-                            UrlList.add(url);
-                        }
-                        System.out.println("size = "+ UrlList.size());
-
-                        PLAdapter plAdapter = new PLAdapter(UrlList);
-                        recyclerView = (RecyclerView) view.findViewById(R.id.recyclerview);
-                        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext()));
-                        recyclerView.setAdapter(plAdapter);
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
+                    System.out.println("\n not null urls");
+                    PLAdapter plAdapter = new PLAdapter(urls);
+                    recyclerView = (RecyclerView) view.findViewById(R.id.recyclerview);
+                    recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplicationContext()));
+                    recyclerView.setAdapter(plAdapter);
             }
         }
 
@@ -173,41 +153,15 @@ public class ViewImagesFragment extends Fragment {
 
 
         @Override
-        public void onBindViewHolder(@NonNull final ViewImagesFragment.PLAdapter.PSViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull final PSViewHolder holder, int position) {
             final GetUrl url = PRList.get(position);
 
-            class DownLoadImageTask extends AsyncTask<String,Void, Bitmap>{
-                /*
-                    doInBackground(Params... params)
-                        Override this method to perform a computation on a background thread.
-                 */
-                protected Bitmap doInBackground(String...urls){
-                    String urlOfImage = url.getUrl();
-                    Bitmap logo = null;
-                    try{
-                        InputStream is = new URL(urlOfImage).openStream();
-                /*
-                    decodeStream(InputStream is)
-                        Decode an input stream into a bitmap.
-                 */
-                        logo = BitmapFactory.decodeStream(is);
-                    }catch(Exception e){ // Catch the download exception
-                        e.printStackTrace();
-                    }
-                    return logo;
-                }
-
-                /*
-                    onPostExecute(Result result)
-                        Runs on the UI thread after doInBackground(Params...).
-                 */
-                protected void onPostExecute(Bitmap result){
-                    holder.image.setImageBitmap(result);
-                }
+            try{String color = url.getUrl().substring(32, 38);
+            color = "#"+ color;
+            System.out.println("\n color = "+ color);
+            holder.image.setColorFilter(Color.parseColor(color));}catch (Exception e){
+                e.printStackTrace();
             }
-
-            DownLoadImageTask downLoadImageTask = new DownLoadImageTask();
-            downLoadImageTask.execute();
         }
 
 
