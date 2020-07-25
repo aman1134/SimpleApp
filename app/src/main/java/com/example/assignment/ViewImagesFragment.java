@@ -9,6 +9,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.google.common.base.Charsets;
 
@@ -41,6 +43,7 @@ public class ViewImagesFragment extends Fragment {
     private String mParam2;
     List<GetUrl> UrlList;
     RecyclerView recyclerView;
+    ProgressBar progressBar;
 
     public ViewImagesFragment() {
         // Required empty public constructor
@@ -79,11 +82,12 @@ public class ViewImagesFragment extends Fragment {
         // Inflate the layout for this fragment
         final View view =  inflater.inflate(R.layout.fragment_view_images, container, false);
 
+        progressBar = view.findViewById(R.id.progressBar);
+
          class VersionTask extends AsyncTask<String, List<GetUrl>, List<GetUrl>> {
              List<GetUrl> urlList;
             @Override
             protected List<GetUrl> doInBackground(String... strings) {
-                String result = null;
                 URL url;
                 HttpURLConnection connection = null;
                 try {
@@ -97,12 +101,24 @@ public class ViewImagesFragment extends Fragment {
                     reader.beginArray();
                     while(reader.hasNext()) {
                         reader.beginObject();
+                        String link = null , title = null;
+                        int id = 0;
                         while (reader.hasNext()) {
                             String name = reader.nextName();
-                            if (name.equals("thumbnailUrl"))
-                                urlList.add(new GetUrl(reader.nextString()));
+
+                            if(name.equals("id"))
+                                id = reader.nextInt();
+                            else if(name.equals("title"))
+                                title = reader.nextString();
+                            else if (name.equals("thumbnailUrl"))
+                                link = reader.nextString();
                             else
                                 reader.skipValue();
+
+                        }
+                        if(link != null && title != null && id != 0){
+                            GetUrl getUrl = new GetUrl(link , id , title);
+                            urlList.add(getUrl);
                         }
                         reader.endObject();
                     }
@@ -156,9 +172,12 @@ public class ViewImagesFragment extends Fragment {
         public void onBindViewHolder(@NonNull final PSViewHolder holder, int position) {
             final GetUrl url = PRList.get(position);
 
+            progressBar.setVisibility(View.INVISIBLE);
             try{String color = url.getUrl().substring(32, 38);
             color = "#"+ color;
             System.out.println("\n color = "+ color);
+            holder.id.setText("Id        :- "+url.getId());
+            holder.title.setText("Title     :- " + url.getTitle());
             holder.image.setColorFilter(Color.parseColor(color));}catch (Exception e){
                 e.printStackTrace();
             }
@@ -174,10 +193,13 @@ public class ViewImagesFragment extends Fragment {
         class PSViewHolder extends RecyclerView.ViewHolder{
 
             ImageView image;
+            TextView id , title;
 
             public PSViewHolder(@NonNull View itemView) {
                 super(itemView);
                 image = itemView.findViewById(R.id.recycler_image);
+                id = itemView.findViewById(R.id.id);
+                title = itemView.findViewById(R.id.title);
             }
         }
     }

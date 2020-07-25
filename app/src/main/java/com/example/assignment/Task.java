@@ -1,7 +1,5 @@
 package com.example.assignment;
 
-import java.util.List;
-
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -11,8 +9,8 @@ import androidx.room.Update;
 @Dao
 interface Task {
 
-    @Query("Select * from user")
-    List<User> getPersonList();
+    @Query("Select * from user where email like :email")
+    User checkEmail(String email);
 
     @Insert
     void insert(User user);

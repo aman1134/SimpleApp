@@ -14,9 +14,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class SignIn extends AppCompatActivity {
 
+    public static String header_email;
     EditText email , password ;
     TextView sigin;
-    List<User> userList;
     int i=0 , z =1;
 
     @Override
@@ -24,42 +24,45 @@ public class SignIn extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_in);
 
-        email = (EditText) findViewById(R.id.email);
-        password = (EditText) findViewById(R.id.password);
-        sigin = (TextView) findViewById(R.id.sign_in);
+        email = findViewById(R.id.email);
+        password = findViewById(R.id.password);
+        sigin = findViewById(R.id.sign_in);
         sigin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!isValidEmail(email.getText().toString()))
+                if(!isValidEmail(email.getText().toString())) {
                     email.setError("Enter the valid email address");
-                if(password.getText().toString().isEmpty())
+                    email.setFocusable(true);
+                }
+                if(password.getText().toString().isEmpty()) {
                     password.setError("Enter the Password ");
+                    password.setFocusable(true);
+                }
 
                 if(isValidEmail(email.getText().toString()) && !password.getText().toString().isEmpty()){
 
-                     class queryTask extends AsyncTask<Void, Void , Void> {
+                     class queryTask extends AsyncTask<Void, Void, Boolean> {
                         private List<User> userList;
 
                          @Override
-                         protected Void doInBackground(Void... voids) {
+                         protected Boolean doInBackground(Void... voids) {
                              AppDatabase db = AppDatabase.getInstance(SignIn.this);
-                             userList = db.task().getPersonList();
-                             z = userList.size();
-                             for(User user : userList){
-                                 i += 1;
-                                 if(user.getEmail().equals(email.getText().toString()) && user.getPassword().equals(password.getText().toString())) {
-                                     startActivity(new Intent(SignIn.this , MainActivity.class));
-                                 }
-                             }
-                             return null;
+                             User user = db.task().checkEmail(email.getText().toString());
+                             if(user != null && user.getPassword().equals(password.getText().toString()))
+                                 startActivity(new Intent(SignIn.this , MainActivity.class));
+                             else
+                                 return true;
+                             return false;
+                         }
+
+                         @Override
+                         protected void onPostExecute(Boolean flag){
+                             if(flag)
+                                 Toast.makeText(SignIn.this , "Entered email or password is incorrect", Toast.LENGTH_SHORT).show();
                          }
                      }
-
                      queryTask qTask = new queryTask();
                      qTask.execute();
-
-                    if(i >= z)
-                        Toast.makeText(SignIn.this , "Email or password is incorrect" , Toast.LENGTH_LONG);
                 }
             }
         });
