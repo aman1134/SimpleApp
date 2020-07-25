@@ -48,8 +48,10 @@ public class SignIn extends AppCompatActivity {
                          protected Boolean doInBackground(Void... voids) {
                              AppDatabase db = AppDatabase.getInstance(SignIn.this);
                              User user = db.task().checkEmail(email.getText().toString());
-                             if(user != null && user.getPassword().equals(password.getText().toString()))
-                                 startActivity(new Intent(SignIn.this , MainActivity.class));
+                             if(user != null && user.getPassword().equals(password.getText().toString())) {
+                                 startActivity(new Intent(SignIn.this, MainActivity.class));
+                                 header_email = email.getText().toString();
+                             }
                              else
                                  return true;
                              return false;
